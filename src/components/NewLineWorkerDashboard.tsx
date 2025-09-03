@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DashboardNavigation, NavItem, NotificationItem } from '@/components/DashboardNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, updateDoc, query, where, orderBy, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, query, where, orderBy, getDoc, limit } from 'firebase/firestore';
 import { COLLECTIONS } from '@/lib/firebase';
 import { fast2SMSService } from '@/services/fast2sms-service';
 import { logger } from '@/lib/logger';
@@ -29,7 +30,11 @@ import {
   Clock,
   Smartphone,
   User,
-  Building2
+  Building2,
+  LayoutDashboard,
+  BarChart3,
+  Settings,
+  CreditCard
 } from 'lucide-react';
 import { formatTimestamp, formatCurrency } from '@/lib/timestamp-utils';
 
@@ -62,7 +67,7 @@ interface CollectionStats {
 }
 
 export function NewLineWorkerDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [retailers, setRetailers] = useState<Retailer[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +83,18 @@ export function NewLineWorkerDashboard() {
     retailerName: string;
     amount: number;
   } | null>(null);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  // Navigation state
+  const navItems: NavItem[] = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'retailers', label: 'Retailers', icon: Store },
+    { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
+  const [activeNav, setActiveNav] = useState('overview');
 
   // Amount suggestions
   const amountSuggestions = [500, 1000, 1500, 2000, 5000];
@@ -329,8 +346,23 @@ export function NewLineWorkerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 flex flex-col dashboard-screen">
+      {/* Navigation */}
+      <DashboardNavigation
+        activeNav={activeNav}
+        setActiveNav={setActiveNav}
+        navItems={navItems}
+        title="PharmaLync"
+        subtitle="Line Worker Dashboard"
+        notificationCount={notificationCount}
+        notifications={notifications}
+        user={user ? { displayName: user.displayName, email: user.email } : undefined}
+        onLogout={logout}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 pt-16 p-3 sm:p-4 lg:p-6 overflow-y-auto pb-20 lg:pb-6">
+        <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -648,6 +680,7 @@ export function NewLineWorkerDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+      </main>
     </div>
   );
 }

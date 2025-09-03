@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DashboardNavigation, NavItem, NotificationItem } from '@/components/DashboardNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, getDoc, setDoc, limit } from 'firebase/firestore';
 import { COLLECTIONS, ROLES } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
 import { 
@@ -29,7 +30,10 @@ import {
   Calendar,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  LayoutDashboard,
+  BarChart3,
+  Settings
 } from 'lucide-react';
 import { formatTimestamp } from '@/lib/timestamp-utils';
 
@@ -67,19 +71,32 @@ interface Activity {
 }
 
 export function NewSuperAdminDashboard() {
-  const { user } = useAuth();
+  const { user, logout, signup } = useAuth();
   const [wholesalers, setWholesalers] = useState<Wholesaler[]>([]);
   const [lineWorkers, setLineWorkers] = useState<LineWorker[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateWholesaler, setShowCreateWholesaler] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  // Navigation state
+  const navItems: NavItem[] = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'wholesalers', label: 'Wholesalers', icon: Building2 },
+    { id: 'line-workers', label: 'Line Workers', icon: UserCheck },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
+  const [activeNav, setActiveNav] = useState('overview');
 
   // Form state
   const [newWholesaler, setNewWholesaler] = useState({
     name: '',
     email: '',
     phone: '',
+    password: '',
     subscriptionStatus: 'ACTIVE',
     subscriptionExpiry: ''
   });
@@ -135,13 +152,13 @@ export function NewSuperAdminDashboard() {
       );
       const lineWorkersData: LineWorker[] = [];
       
-      for (const doc of lineWorkersSnapshot.docs) {
-        const data = doc.data();
+      for (const document of lineWorkersSnapshot.docs) {
+        const data = document.data();
         const wholesalerDoc = await getDoc(doc(db, COLLECTIONS.TENANTS, data.tenantId));
         const wholesalerName = wholesalerDoc.exists() ? wholesalerDoc.data().name : 'Unknown';
         
         lineWorkersData.push({
-          id: doc.id,
+          id: document.id,
           displayName: data.displayName,
           email: data.email,
           phone: data.phone,
@@ -176,33 +193,66 @@ export function NewSuperAdminDashboard() {
 
   const createWholesaler = async () => {
     try {
-      const wholesalerData = {
-        name: newWholesaler.name,
-        adminEmail: newWholesaler.email,
-        adminPhone: newWholesaler.phone,
-        status: 'ACTIVE',
-        subscriptionStatus: newWholesaler.subscriptionStatus,
-        subscriptionExpiry: newWholesaler.subscriptionExpiry ? new Date(newWholesaler.subscriptionExpiry) : null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+      if (!newWholesaler.email || !newWholesaler.password) {
+        alert('Email and password are required');
+        return;
+      }
+
+      // Create Firebase Auth user first
+      const authResult = await signup(newWholesaler.email, newWholesaler.password, newWholesaler.name, '1376');
       
-      await addDoc(collection(db, COLLECTIONS.TENANTS), wholesalerData);
-      
-      // Reset form
-      setNewWholesaler({
-        name: '',
-        email: '',
-        phone: '',
-        subscriptionStatus: 'ACTIVE',
-        subscriptionExpiry: ''
-      });
-      
-      setShowCreateWholesaler(false);
-      fetchData();
-      
-    } catch (error) {
+      if (authResult.user) {
+        // Create wholesaler tenant record
+        const wholesalerData = {
+          name: newWholesaler.name,
+          adminEmail: newWholesaler.email,
+          adminPhone: newWholesaler.phone,
+          status: 'ACTIVE',
+          subscriptionStatus: newWholesaler.subscriptionStatus,
+          subscriptionExpiry: newWholesaler.subscriptionExpiry ? new Date(newWholesaler.subscriptionExpiry) : null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        const tenantRef = await addDoc(collection(db, COLLECTIONS.TENANTS), wholesalerData);
+        
+        // Create user record in Firestore for the wholesaler admin
+        const userRecord = {
+          uid: authResult.user.uid,
+          displayName: newWholesaler.name,
+          email: newWholesaler.email,
+          phone: newWholesaler.phone,
+          tenantId: tenantRef.id,
+          roles: [ROLES.WHOLESALER_ADMIN],
+          active: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await setDoc(doc(db, COLLECTIONS.USERS, authResult.user.uid), userRecord);
+        
+        // Reset form
+        setNewWholesaler({
+          name: '',
+          email: '',
+          phone: '',
+          password: '',
+          subscriptionStatus: 'ACTIVE',
+          subscriptionExpiry: ''
+        });
+        
+        setShowCreateWholesaler(false);
+        fetchData();
+        
+        alert('Wholesaler created successfully! They can now login with their email and password.');
+      }
+    } catch (error: any) {
       logger.error('Error creating wholesaler', error, { context: 'NewSuperAdminDashboard' });
+      if (error.code === 'auth/email-already-in-use') {
+        alert('This email is already in use. Please use a different email.');
+      } else {
+        alert('Failed to create wholesaler. Please try again.');
+      }
     }
   };
 
@@ -238,8 +288,23 @@ export function NewSuperAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 flex flex-col dashboard-screen">
+      {/* Navigation */}
+      <DashboardNavigation
+        activeNav={activeNav}
+        setActiveNav={setActiveNav}
+        navItems={navItems}
+        title="PharmaLync"
+        subtitle="Super Admin Dashboard"
+        notificationCount={notificationCount}
+        notifications={notifications}
+        user={user ? { displayName: user.displayName, email: user.email } : undefined}
+        onLogout={logout}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 pt-16 p-3 sm:p-4 lg:p-6 overflow-y-auto pb-20 lg:pb-6">
+        <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -290,6 +355,16 @@ export function NewSuperAdminDashboard() {
                   />
                 </div>
                 <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newWholesaler.password}
+                    onChange={(e) => setNewWholesaler(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Enter password for login"
+                  />
+                </div>
+                <div>
                   <Label htmlFor="subscription">Subscription Status</Label>
                   <Select value={newWholesaler.subscriptionStatus} onValueChange={(value) => setNewWholesaler(prev => ({ ...prev, subscriptionStatus: value }))}>
                     <SelectTrigger>
@@ -319,194 +394,348 @@ export function NewSuperAdminDashboard() {
           </Dialog>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Wholesalers</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{wholesalers.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {wholesalers.filter(w => w.status === 'ACTIVE').length} active
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Line Workers</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{lineWorkers.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {lineWorkers.filter(lw => lw.status === 'ACTIVE').length} active
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {wholesalers.filter(w => w.subscriptionStatus === 'ACTIVE').length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                This month
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">System Activities</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activities.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Recent activities
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search wholesalers or line workers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        {/* Wholesalers Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Wholesalers</CardTitle>
-            <CardDescription>Manage wholesaler accounts and subscriptions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Subscription</TableHead>
-                  <TableHead>Line Workers</TableHead>
-                  <TableHead>Retailers</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredWholesalers.map((wholesaler) => (
-                  <TableRow key={wholesaler.id}>
-                    <TableCell className="font-medium">{wholesaler.name}</TableCell>
-                    <TableCell>{wholesaler.email}</TableCell>
-                    <TableCell>{wholesaler.phone || '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant={wholesaler.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                        {wholesaler.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={wholesaler.subscriptionStatus === 'ACTIVE' ? 'default' : 'destructive'}>
-                        {wholesaler.subscriptionStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{wholesaler.lineWorkerCount}</TableCell>
-                    <TableCell>{wholesaler.retailerCount}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleWholesalerStatus(wholesaler.id, wholesaler.status)}
-                      >
-                        {wholesaler.status === 'ACTIVE' ? (
-                          <ToggleRight className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {/* Line Workers Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Line Workers</CardTitle>
-            <CardDescription>All line workers and their assigned wholesalers</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Wholesaler</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLineWorkers.map((lineWorker) => (
-                  <TableRow key={lineWorker.id}>
-                    <TableCell className="font-medium">{lineWorker.displayName}</TableCell>
-                    <TableCell>{lineWorker.email}</TableCell>
-                    <TableCell>{lineWorker.phone || '-'}</TableCell>
-                    <TableCell>{lineWorker.wholesalerName}</TableCell>
-                    <TableCell>
-                      <Badge variant={lineWorker.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                        {lineWorker.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatTimestamp(lineWorker.createdAt)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activities */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
-            <CardDescription>System-wide activities and events</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {activities.map((activity) => (
-                <div key={activity.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
-                  <Activity className="h-5 w-5 text-blue-600" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.description}</p>
-                    <p className="text-xs text-gray-500">
-                      {activity.userName} • {formatTimestamp(activity.timestamp)}
+        {/* Content based on active navigation */}
+        <div className="space-y-6">
+          {activeNav === 'overview' && (
+            <>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Wholesalers</CardTitle>
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{wholesalers.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {wholesalers.filter(w => w.status === 'ACTIVE').length} active
                     </p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Line Workers</CardTitle>
+                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{lineWorkers.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {lineWorkers.filter(lw => lw.status === 'ACTIVE').length} active
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {wholesalers.filter(w => w.subscriptionStatus === 'ACTIVE').length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      This month
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">System Activities</CardTitle>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{activities.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Recent activities
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Activities */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Activities</CardTitle>
+                  <CardDescription>System-wide activities and events</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {activities.slice(0, 5).map((activity) => (
+                      <div key={activity.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                        <Activity className="h-5 w-5 text-blue-600" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{activity.description}</p>
+                          <p className="text-xs text-gray-500">
+                            {activity.userName} • {formatTimestamp(activity.timestamp)}
+                          </p>
+                        </div>
+                        <Badge variant="outline">{activity.type.replace('_', ' ')}</Badge>
+                      </div>
+                    ))}
                   </div>
-                  <Badge variant="outline">{activity.type.replace('_', ' ')}</Badge>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {activeNav === 'wholesalers' && (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Wholesalers</h2>
+                  <p className="text-gray-600">Manage wholesaler accounts and subscriptions</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <Dialog open={showCreateWholesaler} onOpenChange={setShowCreateWholesaler}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Wholesaler
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Create New Wholesaler</DialogTitle>
+                      <DialogDescription>
+                        Add a new wholesaler account to the system
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">Wholesaler Name</Label>
+                        <Input
+                          id="name"
+                          value={newWholesaler.name}
+                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="Enter wholesaler name"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Admin Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newWholesaler.email}
+                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="admin@wholesaler.com"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="phone">Admin Phone</Label>
+                        <Input
+                          id="phone"
+                          value={newWholesaler.phone}
+                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="+91XXXXXXXXXX"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={newWholesaler.password}
+                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, password: e.target.value }))}
+                          placeholder="Enter password for login"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="subscription">Subscription Status</Label>
+                        <Select value={newWholesaler.subscriptionStatus} onValueChange={(value) => setNewWholesaler(prev => ({ ...prev, subscriptionStatus: value }))}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ACTIVE">Active</SelectItem>
+                            <SelectItem value="EXPIRED">Expired</SelectItem>
+                            <SelectItem value="TRIAL">Trial</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="expiry">Subscription Expiry</Label>
+                        <Input
+                          id="expiry"
+                          type="date"
+                          value={newWholesaler.subscriptionExpiry}
+                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, subscriptionExpiry: e.target.value }))}
+                        />
+                      </div>
+                      <Button onClick={createWholesaler} className="w-full">
+                        Create Wholesaler
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search wholesalers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Wholesalers Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Wholesalers</CardTitle>
+                  <CardDescription>Manage wholesaler accounts and subscriptions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Subscription</TableHead>
+                        <TableHead>Line Workers</TableHead>
+                        <TableHead>Retailers</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredWholesalers.map((wholesaler) => (
+                        <TableRow key={wholesaler.id}>
+                          <TableCell className="font-medium">{wholesaler.name}</TableCell>
+                          <TableCell>{wholesaler.email}</TableCell>
+                          <TableCell>{wholesaler.phone || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant={wholesaler.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                              {wholesaler.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={wholesaler.subscriptionStatus === 'ACTIVE' ? 'default' : 'destructive'}>
+                              {wholesaler.subscriptionStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{wholesaler.lineWorkerCount}</TableCell>
+                          <TableCell>{wholesaler.retailerCount}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleWholesalerStatus(wholesaler.id, wholesaler.status)}
+                            >
+                              {wholesaler.status === 'ACTIVE' ? (
+                                <ToggleRight className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <ToggleLeft className="h-4 w-4 text-gray-400" />
+                              )}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {activeNav === 'line-workers' && (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Line Workers</h2>
+                  <p className="text-gray-600">All line workers and their assigned wholesalers</p>
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="relative mb-6">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search line workers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Line Workers Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Line Workers</CardTitle>
+                  <CardDescription>All line workers and their assigned wholesalers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Wholesaler</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLineWorkers.map((lineWorker) => (
+                        <TableRow key={lineWorker.id}>
+                          <TableCell className="font-medium">{lineWorker.displayName}</TableCell>
+                          <TableCell>{lineWorker.email}</TableCell>
+                          <TableCell>{lineWorker.phone || '-'}</TableCell>
+                          <TableCell>{lineWorker.wholesalerName}</TableCell>
+                          <TableCell>
+                            <Badge variant={lineWorker.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                              {lineWorker.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatTimestamp(lineWorker.createdAt)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {activeNav === 'analytics' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Analytics</CardTitle>
+                <CardDescription>System-wide analytics and reporting</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <BarChart3 className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics Dashboard</h3>
+                  <p className="text-gray-500">Advanced analytics and reporting features coming soon...</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeNav === 'settings' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Settings</CardTitle>
+                <CardDescription>System configuration and preferences</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <Settings className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">System Settings</h3>
+                  <p className="text-gray-500">System configuration and preferences coming soon...</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
+      </main>
     </div>
   );
 }

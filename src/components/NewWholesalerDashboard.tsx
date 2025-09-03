@@ -11,9 +11,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DashboardNavigation, NavItem, NotificationItem } from '@/components/DashboardNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, getDoc, setDoc, limit } from 'firebase/firestore';
 import { COLLECTIONS, ROLES } from '@/lib/firebase';
 import { logger } from '@/lib/logger';
 import { 
@@ -34,7 +35,11 @@ import {
   Store,
   TrendingUp,
   Download,
-  Eye
+  Eye,
+  LayoutDashboard,
+  BarChart3,
+  Settings,
+  UsersIcon
 } from 'lucide-react';
 import { formatTimestamp, formatCurrency } from '@/lib/timestamp-utils';
 
@@ -69,7 +74,7 @@ interface Payment {
 }
 
 export function NewWholesalerDashboard() {
-  const { user } = useAuth();
+  const { user, logout, signup } = useAuth();
   const [lineWorkers, setLineWorkers] = useState<LineWorker[]>([]);
   const [retailers, setRetailers] = useState<Retailer[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -77,6 +82,19 @@ export function NewWholesalerDashboard() {
   const [showCreateLineWorker, setShowCreateLineWorker] = useState(false);
   const [showCreateRetailer, setShowCreateRetailer] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  // Navigation state
+  const navItems: NavItem[] = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'line-workers', label: 'Line Workers', icon: UsersIcon },
+    { id: 'retailers', label: 'Retailers', icon: Store },
+    { id: 'payments', label: 'Payments', icon: DollarSign },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
+  const [activeNav, setActiveNav] = useState('overview');
 
   // Form states
   const [newLineWorker, setNewLineWorker] = useState({
@@ -205,32 +223,50 @@ export function NewWholesalerDashboard() {
     if (!user?.tenantId) return;
     
     try {
-      const lineWorkerData = {
-        displayName: newLineWorker.displayName,
-        email: newLineWorker.email,
-        phone: newLineWorker.phone,
-        tenantId: user.tenantId,
-        roles: [ROLES.LINE_WORKER],
-        active: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+      if (!newLineWorker.email || !newLineWorker.password) {
+        alert('Email and password are required');
+        return;
+      }
+
+      // Create Firebase Auth user first
+      const authResult = await signup(newLineWorker.email, newLineWorker.password, newLineWorker.displayName);
       
-      await addDoc(collection(db, COLLECTIONS.USERS), lineWorkerData);
-      
-      // Reset form
-      setNewLineWorker({
-        displayName: '',
-        email: '',
-        phone: '',
-        password: ''
-      });
-      
-      setShowCreateLineWorker(false);
-      fetchData();
-      
-    } catch (error) {
+      if (authResult.user) {
+        // Create user record in Firestore for the line worker
+        const lineWorkerData = {
+          uid: authResult.user.uid,
+          displayName: newLineWorker.displayName,
+          email: newLineWorker.email,
+          phone: newLineWorker.phone,
+          tenantId: user.tenantId,
+          roles: [ROLES.LINE_WORKER],
+          active: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await setDoc(doc(db, COLLECTIONS.USERS, authResult.user.uid), lineWorkerData);
+        
+        // Reset form
+        setNewLineWorker({
+          displayName: '',
+          email: '',
+          phone: '',
+          password: ''
+        });
+        
+        setShowCreateLineWorker(false);
+        fetchData();
+        
+        alert('Line worker created successfully! They can now login with their email and password.');
+      }
+    } catch (error: any) {
       logger.error('Error creating line worker', error, { context: 'NewWholesalerDashboard' });
+      if (error.code === 'auth/email-already-in-use') {
+        alert('This email is already in use. Please use a different email.');
+      } else {
+        alert('Failed to create line worker. Please try again.');
+      }
     }
   };
 
@@ -352,8 +388,23 @@ export function NewWholesalerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 flex flex-col dashboard-screen">
+      {/* Navigation */}
+      <DashboardNavigation
+        activeNav={activeNav}
+        setActiveNav={setActiveNav}
+        navItems={navItems}
+        title="PharmaLync"
+        subtitle="Wholesaler Dashboard"
+        notificationCount={notificationCount}
+        notifications={notifications}
+        user={user ? { displayName: user.displayName, email: user.email } : undefined}
+        onLogout={logout}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 pt-16 p-3 sm:p-4 lg:p-6 overflow-y-auto pb-20 lg:pb-6">
+        <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -402,6 +453,16 @@ export function NewWholesalerDashboard() {
                       value={newLineWorker.phone}
                       onChange={(e) => setNewLineWorker(prev => ({ ...prev, phone: e.target.value }))}
                       placeholder="+91XXXXXXXXXX"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lw-password">Password</Label>
+                    <Input
+                      id="lw-password"
+                      type="password"
+                      value={newLineWorker.password}
+                      onChange={(e) => setNewLineWorker(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Enter password for login"
                     />
                   </div>
                   <Button onClick={createLineWorker} className="w-full">
@@ -695,6 +756,7 @@ export function NewWholesalerDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+      </main>
     </div>
   );
 }
