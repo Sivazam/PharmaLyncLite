@@ -44,7 +44,8 @@ import {
   Activity,
   Trophy,
   Star,
-  Zap
+  Zap,
+  Download
 } from 'lucide-react';
 import { formatTimestamp, formatCurrency } from '@/lib/timestamp-utils';
 import { motion } from 'framer-motion';
