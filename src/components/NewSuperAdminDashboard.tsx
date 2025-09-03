@@ -33,9 +33,25 @@ import {
   MapPin,
   LayoutDashboard,
   BarChart3,
-  Settings
+  Settings,
+  TrendingUp,
+  UsersIcon,
+  DollarSign,
+  CreditCard,
+  Store,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Target,
+  PieChart,
+  Database,
+  Shield,
+  Bell,
+  FileText,
+  Download
 } from 'lucide-react';
 import { formatTimestamp } from '@/lib/timestamp-utils';
+import { motion } from 'framer-motion';
 
 interface Wholesaler {
   id: string;
@@ -400,84 +416,120 @@ export function NewSuperAdminDashboard() {
             <>
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Wholesalers</CardTitle>
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{wholesalers.length}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {wholesalers.filter(w => w.status === 'ACTIVE').length} active
-                    </p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Wholesalers</CardTitle>
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{wholesalers.length}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {wholesalers.filter(w => w.status === 'ACTIVE').length} active
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
                 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Line Workers</CardTitle>
-                    <UserCheck className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{lineWorkers.length}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {lineWorkers.filter(lw => lw.status === 'ACTIVE').length} active
-                    </p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Line Workers</CardTitle>
+                      <UserCheck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{lineWorkers.length}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {lineWorkers.filter(lw => lw.status === 'ACTIVE').length} active
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
                 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {wholesalers.filter(w => w.subscriptionStatus === 'ACTIVE').length}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      This month
-                    </p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {wholesalers.filter(w => w.subscriptionStatus === 'ACTIVE').length}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This month
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
                 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">System Activities</CardTitle>
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{activities.length}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Recent activities
-                    </p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">System Activities</CardTitle>
+                      <Activity className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{activities.length}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Recent activities
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </div>
 
               {/* Recent Activities */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activities</CardTitle>
-                  <CardDescription>System-wide activities and events</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {activities.slice(0, 5).map((activity) => (
-                      <div key={activity.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
-                        <Activity className="h-5 w-5 text-blue-600" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{activity.description}</p>
-                          <p className="text-xs text-gray-500">
-                            {activity.userName} • {formatTimestamp(activity.timestamp)}
-                          </p>
-                        </div>
-                        <Badge variant="outline">{activity.type.replace('_', ' ')}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Activities</CardTitle>
+                    <CardDescription>System-wide activities and events</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {activities.slice(0, 5).map((activity, index) => (
+                        <motion.div
+                          key={activity.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.6 + index * 0.1 }}
+                          className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg"
+                        >
+                          <Activity className="h-5 w-5 text-blue-600" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{activity.description}</p>
+                            <p className="text-xs text-gray-500">
+                              {activity.userName} • {formatTimestamp(activity.timestamp)}
+                            </p>
+                          </div>
+                          <Badge variant="outline">{activity.type.replace('_', ' ')}</Badge>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </>
           )}
 
@@ -703,35 +755,593 @@ export function NewSuperAdminDashboard() {
           )}
 
           {activeNav === 'analytics' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Analytics</CardTitle>
-                <CardDescription>System-wide analytics and reporting</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <BarChart3 className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics Dashboard</h3>
-                  <p className="text-gray-500">Advanced analytics and reporting features coming soon...</p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">System Analytics</h2>
+                  <p className="text-gray-600">Comprehensive system-wide analytics and reporting</p>
                 </div>
-              </CardContent>
-            </Card>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Report
+                </Button>
+              </div>
+
+              {/* Key Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">₹2,45,000</div>
+                      <p className="text-xs text-muted-foreground">
+                        +12.5% from last month
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                      <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">1,247</div>
+                      <p className="text-xs text-muted-foreground">
+                        +8.2% from last month
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                      <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">98.5%</div>
+                      <p className="text-xs text-muted-foreground">
+                        Payment success rate
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Avg. Processing Time</CardTitle>
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">2.3s</div>
+                      <p className="text-xs text-muted-foreground">
+                        OTP verification
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+
+              {/* Charts Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Revenue Chart */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Revenue Trend</CardTitle>
+                      <CardDescription>Monthly revenue over the last 6 months</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+                        <div className="text-center">
+                          <TrendingUp className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                          <p className="text-gray-500">Revenue Chart</p>
+                          <p className="text-sm text-gray-400">Interactive chart coming soon</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                {/* User Growth Chart */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>User Growth</CardTitle>
+                      <CardDescription>New user registrations by month</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+                        <div className="text-center">
+                          <UsersIcon className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                          <p className="text-gray-500">Growth Chart</p>
+                          <p className="text-sm text-gray-400">Interactive chart coming soon</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+
+              {/* Performance Metrics */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="lg:col-span-2"
+                >
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Top Performing Wholesalers</CardTitle>
+                      <CardDescription>Wholesalers with highest collection efficiency</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {wholesalers.slice(0, 5).map((wholesaler, index) => (
+                          <motion.div
+                            key={wholesaler.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.8 + index * 0.1 }}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-sm font-semibold text-blue-600">#{index + 1}</span>
+                              </div>
+                              <div>
+                                <p className="font-medium">{wholesaler.name}</p>
+                                <p className="text-sm text-gray-500">{wholesaler.lineWorkerCount} workers</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold">₹{(Math.random() * 50000 + 10000).toLocaleString()}</p>
+                              <p className="text-sm text-green-600">+{Math.floor(Math.random() * 20 + 5)}%</p>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
+                >
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>System Health</CardTitle>
+                      <CardDescription>Current system status</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.9 }}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span className="text-sm">API Status</span>
+                          </div>
+                          <Badge variant="default">Operational</Badge>
+                        </motion.div>
+                        
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 1.0 }}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span className="text-sm">Database</span>
+                          </div>
+                          <Badge variant="default">Healthy</Badge>
+                        </motion.div>
+                        
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 1.1 }}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span className="text-sm">SMS Service</span>
+                          </div>
+                          <Badge variant="default">Active</Badge>
+                        </motion.div>
+                        
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 1.2 }}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                            <span className="text-sm">Storage</span>
+                          </div>
+                          <Badge variant="secondary">78% Used</Badge>
+                        </motion.div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+            </motion.div>
           )}
 
           {activeNav === 'settings' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Settings</CardTitle>
-                <CardDescription>System configuration and preferences</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Settings className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">System Settings</h3>
-                  <p className="text-gray-500">System configuration and preferences coming soon...</p>
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              {/* Header */}
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">System Settings</h2>
+                <p className="text-gray-600">Configure system-wide preferences and settings</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Main Settings */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="lg:col-span-2 space-y-6"
+                >
+                  {/* General Settings */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <Settings className="h-5 w-5" />
+                        <span>General Settings</span>
+                      </CardTitle>
+                      <CardDescription>Basic system configuration</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <Label className="text-base font-medium">Maintenance Mode</Label>
+                          <p className="text-sm text-gray-500">Temporarily disable user access</p>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          Configure
+                        </Button>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <Label className="text-base font-medium">Default Currency</Label>
+                          <p className="text-sm text-gray-500">Set default currency for transactions</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium">INR (₹)</span>
+                          <Button variant="outline" size="sm">
+                            Change
+                          </Button>
+                        </div>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <Label className="text-base font-medium">Time Zone</Label>
+                          <p className="text-sm text-gray-500">Set system time zone</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium">IST (UTC+5:30)</span>
+                          <Button variant="outline" size="sm">
+                            Change
+                          </Button>
+                        </div>
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Security Settings */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <Shield className="h-5 w-5" />
+                        <span>Security Settings</span>
+                      </CardTitle>
+                      <CardDescription>Manage system security and access controls</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <Label className="text-base font-medium">OTP Expiry Time</Label>
+                          <p className="text-sm text-gray-500">Set OTP validity duration</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium">10 minutes</span>
+                          <Button variant="outline" size="sm">
+                            Configure
+                          </Button>
+                        </div>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <Label className="text-base font-medium">Failed Login Attempts</Label>
+                          <p className="text-sm text-gray-500">Maximum attempts before lockout</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium">5 attempts</span>
+                          <Button variant="outline" size="sm">
+                            Configure
+                          </Button>
+                        </div>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.7 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <Label className="text-base font-medium">Session Timeout</Label>
+                          <p className="text-sm text-gray-500">Automatic logout duration</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium">30 minutes</span>
+                          <Button variant="outline" size="sm">
+                            Configure
+                          </Button>
+                        </div>
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Notification Settings */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <Bell className="h-5 w-5" />
+                        <span>Notification Settings</span>
+                      </CardTitle>
+                      <CardDescription>Configure system notifications and alerts</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.8 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <Label className="text-base font-medium">Email Notifications</Label>
+                          <p className="text-sm text-gray-500">System alerts via email</p>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          Configure
+                        </Button>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.9 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <Label className="text-base font-medium">SMS Notifications</Label>
+                          <p className="text-sm text-gray-500">Payment confirmations via SMS</p>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          Configure
+                        </Button>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1.0 }}
+                        className="flex items-center justify-between"
+                      >
+                        <div>
+                          <Label className="text-base font-medium">Push Notifications</Label>
+                          <p className="text-sm text-gray-500">Real-time alerts in dashboard</p>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          Configure
+                        </Button>
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                {/* Quick Actions Panel */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="space-y-6"
+                >
+                  {/* System Status */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <Database className="h-5 w-5" />
+                        <span>System Status</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Last Backup</span>
+                          <Badge variant="default">2 hours ago</Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Database Size</span>
+                          <Badge variant="secondary">2.4 GB</Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Active Sessions</span>
+                          <Badge variant="default">47</Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">API Requests</span>
+                          <Badge variant="default">1.2K/hr</Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Quick Actions */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Quick Actions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        <Button variant="outline" className="w-full justify-start">
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generate System Report
+                        </Button>
+                      </motion.div>
+                      
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.4 }}
+                      >
+                        <Button variant="outline" className="w-full justify-start">
+                          <Download className="h-4 w-4 mr-2" />
+                          Backup Database
+                        </Button>
+                      </motion.div>
+                      
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.5 }}
+                      >
+                        <Button variant="outline" className="w-full justify-start">
+                          <Users className="h-4 w-4 mr-2" />
+                          Manage User Roles
+                        </Button>
+                      </motion.div>
+                      
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.6 }}
+                      >
+                        <Button variant="outline" className="w-full justify-start">
+                          <Bell className="h-4 w-4 mr-2" />
+                          Test Notifications
+                        </Button>
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Recent Activity */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Activity</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {activities.slice(0, 3).map((activity, index) => (
+                          <motion.div
+                            key={activity.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.7 + index * 0.1 }}
+                            className="flex items-start space-x-2"
+                          >
+                            <Activity className="h-3 w-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs text-gray-600 truncate">{activity.description}</p>
+                              <p className="text-xs text-gray-400">
+                                {formatTimestamp(activity.timestamp)}
+                              </p>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+            </motion.div>
           )}
         </div>
       </div>
