@@ -7,18 +7,22 @@ import { NewSuperAdminDashboard } from '@/components/NewSuperAdminDashboard';
 import { NewWholesalerDashboard } from '@/components/NewWholesalerDashboard';
 import { NewLineWorkerDashboard } from '@/components/NewLineWorkerDashboard';
 import { RetailerDashboard } from '@/components/RetailerDashboard';
+import { WholesalerApprovalScreen } from '@/components/WholesalerApprovalScreen';
 import { AppIntroCarousel } from '@/components/AppIntroCarousel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AppLoadingScreen } from '@/components/AppLoadingScreen';
 import { useRouteProtection } from '@/hooks/use-route-protection';
 import { useState, useEffect } from 'react';
 import { hasSeenIntroCarousel, resetIntroCarousel } from '@/lib/intro-carousel';
+import { db, COLLECTIONS } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Home() {
   const { user, loading, loadingProgress, loadingStage, hasRole } = useAuth();
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [retailerId, setRetailerId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(false);
+  const [wholesalerApproved, setWholesalerApproved] = useState<boolean | null>(null);
 
   // Apply route protection to prevent back navigation after logout
   useRouteProtection();
@@ -63,6 +67,40 @@ export default function Home() {
     }
   }, [loading, user, retailerId]);
 
+  // Check for wholesaler approval status
+  useEffect(() => {
+    const checkWholesalerApproval = async () => {
+      if (user && hasRole('WHOLESALER_ADMIN') && user.tenantId) {
+        try {
+          const tenantDoc = await getDoc(doc(db, COLLECTIONS.TENANTS, user.tenantId));
+          if (tenantDoc.exists()) {
+            const tenantData = tenantDoc.data();
+            setWholesalerApproved(tenantData.approved === true);
+          } else {
+            setWholesalerApproved(false);
+          }
+        } catch (error) {
+          console.error('Error checking wholesaler approval:', error);
+          setWholesalerApproved(false);
+        }
+      } else {
+        setWholesalerApproved(null);
+      }
+    };
+
+    checkWholesalerApproval();
+  }, [user, hasRole]);
+
+  const handleIntroComplete = () => {
+    setShowIntro(false);
+    // The carousel component itself handles marking as seen
+  };
+
+  const handleIntroSkip = () => {
+    setShowIntro(false);
+    // The carousel component itself handles marking as seen
+  };
+
   // Debug function to reset intro (remove in production)
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -76,16 +114,6 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
-
-  const handleIntroComplete = () => {
-    setShowIntro(false);
-    // The carousel component itself handles marking as seen
-  };
-
-  const handleIntroSkip = () => {
-    setShowIntro(false);
-    // The carousel component itself handles marking as seen
-  };
 
   // Loading state
   if (loading) {
@@ -138,8 +166,16 @@ export default function Home() {
     return <NewSuperAdminDashboard />;
   }
 
+  // Check wholesaler approval status before showing dashboard
   if (hasRole('WHOLESALER_ADMIN')) {
-    return <NewWholesalerDashboard />;
+    if (wholesalerApproved === false) {
+      return <WholesalerApprovalScreen />;
+    } else if (wholesalerApproved === true) {
+      return <NewWholesalerDashboard />;
+    } else {
+      // Still checking approval status, show loading
+      return <AppLoadingScreen progress={loadingProgress} stage="Checking approval status..." />;
+    }
   }
 
   if (hasRole('LINE_WORKER')) {

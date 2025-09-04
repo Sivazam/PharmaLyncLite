@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { LoginForm } from './LoginForm';
 import { SignupForm } from './SignupForm';
 import { ResetPasswordForm } from './ResetPasswordForm';
+import { WholesalerSignupForm } from './WholesalerSignupForm';
 import { NetflixRoleSelection } from './NetflixRoleSelection';
 import Image from 'next/image';
 import { StatusBarColor } from '../ui/StatusBarColor';
 
-type AuthMode = 'login' | 'signup' | 'reset';
+type AuthMode = 'login' | 'signup' | 'reset' | 'wholesalerSignup';
 type AuthView = 'roleSelection' | 'authForm';
 
 interface AuthComponentProps {
@@ -42,6 +43,7 @@ export function AuthComponent({ onShowRoleSelection }: AuthComponentProps) {
     setSelectedRole(role);
     if (role !== 'RETAILER') { // Retailer redirects directly, others show login form
       setView('authForm');
+      setMode('login'); // Always start with login for all roles
     }
   };
 
@@ -120,10 +122,17 @@ export function AuthComponent({ onShowRoleSelection }: AuthComponentProps) {
             onResetPassword={showResetPassword}
             onShowRoleSelection={onShowRoleSelection}
             selectedRole={selectedRole}
+            onShowWholesalerSignup={() => setMode('wholesalerSignup')}
           />
         )}
         {mode === 'signup' && (
           <SignupForm onToggleMode={toggleMode} />
+        )}
+        {mode === 'wholesalerSignup' && (
+          <WholesalerSignupForm 
+            onToggleMode={toggleMode}
+            onBackToRoleSelection={backToRoleSelection}
+          />
         )}
         {mode === 'reset' && (
           <ResetPasswordForm onBackToLogin={backToLogin} />

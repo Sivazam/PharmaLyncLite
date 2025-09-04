@@ -64,6 +64,7 @@ interface Wholesaler {
   createdAt: any;
   lineWorkerCount: number;
   retailerCount: number;
+  approved: boolean; // New field for approval status
 }
 
 interface LineWorker {
@@ -92,7 +93,6 @@ export function NewSuperAdminDashboard() {
   const [lineWorkers, setLineWorkers] = useState<LineWorker[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateWholesaler, setShowCreateWholesaler] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -107,15 +107,15 @@ export function NewSuperAdminDashboard() {
   ];
   const [activeNav, setActiveNav] = useState('overview');
 
-  // Form state
-  const [newWholesaler, setNewWholesaler] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    subscriptionStatus: 'ACTIVE',
-    subscriptionExpiry: ''
-  });
+  // Form state - removed since we no longer create wholesalers from Super Admin
+  // const [newWholesaler, setNewWholesaler] = useState({
+  //   name: '',
+  //   email: '',
+  //   phone: '',
+  //   password: '',
+  //   subscriptionStatus: 'ACTIVE',
+  //   subscriptionExpiry: ''
+  // });
 
   useEffect(() => {
     fetchData();
@@ -156,7 +156,8 @@ export function NewSuperAdminDashboard() {
           subscriptionExpiry: data.subscriptionExpiry,
           createdAt: data.createdAt,
           lineWorkerCount: lineWorkersSnapshot.size,
-          retailerCount
+          retailerCount,
+          approved: data.approved || false // New field - default to false if not present
         });
       }
       
@@ -207,71 +208,6 @@ export function NewSuperAdminDashboard() {
     }
   };
 
-  const createWholesaler = async () => {
-    try {
-      if (!newWholesaler.email || !newWholesaler.password) {
-        alert('Email and password are required');
-        return;
-      }
-
-      // Create Firebase Auth user first
-      const authResult = await signup(newWholesaler.email, newWholesaler.password, newWholesaler.name, '1376');
-      
-      if (authResult.user) {
-        // Create wholesaler tenant record
-        const wholesalerData = {
-          name: newWholesaler.name,
-          adminEmail: newWholesaler.email,
-          adminPhone: newWholesaler.phone,
-          status: 'ACTIVE',
-          subscriptionStatus: newWholesaler.subscriptionStatus,
-          subscriptionExpiry: newWholesaler.subscriptionExpiry ? new Date(newWholesaler.subscriptionExpiry) : null,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        const tenantRef = await addDoc(collection(db, COLLECTIONS.TENANTS), wholesalerData);
-        
-        // Create user record in Firestore for the wholesaler admin
-        const userRecord = {
-          uid: authResult.user.uid,
-          displayName: newWholesaler.name,
-          email: newWholesaler.email,
-          phone: newWholesaler.phone,
-          tenantId: tenantRef.id,
-          roles: [ROLES.WHOLESALER_ADMIN],
-          active: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        await setDoc(doc(db, COLLECTIONS.USERS, authResult.user.uid), userRecord);
-        
-        // Reset form
-        setNewWholesaler({
-          name: '',
-          email: '',
-          phone: '',
-          password: '',
-          subscriptionStatus: 'ACTIVE',
-          subscriptionExpiry: ''
-        });
-        
-        setShowCreateWholesaler(false);
-        fetchData();
-        
-        alert('Wholesaler created successfully! They can now login with their email and password.');
-      }
-    } catch (error: any) {
-      logger.error('Error creating wholesaler', error, { context: 'NewSuperAdminDashboard' });
-      if (error.code === 'auth/email-already-in-use') {
-        alert('This email is already in use. Please use a different email.');
-      } else {
-        alert('Failed to create wholesaler. Please try again.');
-      }
-    }
-  };
-
   const toggleWholesalerStatus = async (wholesalerId: string, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
@@ -282,6 +218,18 @@ export function NewSuperAdminDashboard() {
       fetchData();
     } catch (error) {
       logger.error('Error toggling wholesaler status', error, { context: 'NewSuperAdminDashboard' });
+    }
+  };
+
+  const toggleWholesalerApproval = async (wholesalerId: string, currentApproved: boolean) => {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.TENANTS, wholesalerId), {
+        approved: !currentApproved,
+        updatedAt: new Date()
+      });
+      fetchData();
+    } catch (error) {
+      logger.error('Error toggling wholesaler approval', error, { context: 'NewSuperAdminDashboard' });
     }
   };
 
@@ -322,92 +270,11 @@ export function NewSuperAdminDashboard() {
       <main className="flex-1 pt-16 p-3 sm:p-4 lg:p-6 overflow-y-auto pb-20 lg:pb-6">
         <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
             <p className="text-gray-600 mt-1">Manage wholesalers and monitor system activity</p>
           </div>
-          <Dialog open={showCreateWholesaler} onOpenChange={setShowCreateWholesaler}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Wholesaler
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create New Wholesaler</DialogTitle>
-                <DialogDescription>
-                  Add a new wholesaler account to the system
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Wholesaler Name</Label>
-                  <Input
-                    id="name"
-                    value={newWholesaler.name}
-                    onChange={(e) => setNewWholesaler(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter wholesaler name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">Admin Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newWholesaler.email}
-                    onChange={(e) => setNewWholesaler(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="admin@wholesaler.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Admin Phone</Label>
-                  <Input
-                    id="phone"
-                    value={newWholesaler.phone}
-                    onChange={(e) => setNewWholesaler(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+91XXXXXXXXXX"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={newWholesaler.password}
-                    onChange={(e) => setNewWholesaler(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Enter password for login"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="subscription">Subscription Status</Label>
-                  <Select value={newWholesaler.subscriptionStatus} onValueChange={(value) => setNewWholesaler(prev => ({ ...prev, subscriptionStatus: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ACTIVE">Active</SelectItem>
-                      <SelectItem value="EXPIRED">Expired</SelectItem>
-                      <SelectItem value="TRIAL">Trial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="expiry">Subscription Expiry</Label>
-                  <Input
-                    id="expiry"
-                    type="date"
-                    value={newWholesaler.subscriptionExpiry}
-                    onChange={(e) => setNewWholesaler(prev => ({ ...prev, subscriptionExpiry: e.target.value }))}
-                  />
-                </div>
-                <Button onClick={createWholesaler} className="w-full">
-                  Create Wholesaler
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
 
         {/* Content based on active navigation */}
@@ -535,92 +402,11 @@ export function NewSuperAdminDashboard() {
 
           {activeNav === 'wholesalers' && (
             <>
-              <div className="flex justify-between items-center mb-6">
+              <div className="mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Wholesalers</h2>
-                  <p className="text-gray-600">Manage wholesaler accounts and subscriptions</p>
+                  <p className="text-gray-600">Manage wholesaler accounts and approvals</p>
                 </div>
-                <Dialog open={showCreateWholesaler} onOpenChange={setShowCreateWholesaler}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Wholesaler
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Create New Wholesaler</DialogTitle>
-                      <DialogDescription>
-                        Add a new wholesaler account to the system
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="name">Wholesaler Name</Label>
-                        <Input
-                          id="name"
-                          value={newWholesaler.name}
-                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="Enter wholesaler name"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="email">Admin Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={newWholesaler.email}
-                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, email: e.target.value }))}
-                          placeholder="admin@wholesaler.com"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">Admin Phone</Label>
-                        <Input
-                          id="phone"
-                          value={newWholesaler.phone}
-                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, phone: e.target.value }))}
-                          placeholder="+91XXXXXXXXXX"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          value={newWholesaler.password}
-                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, password: e.target.value }))}
-                          placeholder="Enter password for login"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="subscription">Subscription Status</Label>
-                        <Select value={newWholesaler.subscriptionStatus} onValueChange={(value) => setNewWholesaler(prev => ({ ...prev, subscriptionStatus: value }))}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ACTIVE">Active</SelectItem>
-                            <SelectItem value="EXPIRED">Expired</SelectItem>
-                            <SelectItem value="TRIAL">Trial</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="expiry">Subscription Expiry</Label>
-                        <Input
-                          id="expiry"
-                          type="date"
-                          value={newWholesaler.subscriptionExpiry}
-                          onChange={(e) => setNewWholesaler(prev => ({ ...prev, subscriptionExpiry: e.target.value }))}
-                        />
-                      </div>
-                      <Button onClick={createWholesaler} className="w-full">
-                        Create Wholesaler
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
               </div>
 
               {/* Search */}
@@ -647,6 +433,7 @@ export function NewSuperAdminDashboard() {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Phone</TableHead>
+                        <TableHead>Approved</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Subscription</TableHead>
                         <TableHead>Line Workers</TableHead>
@@ -661,6 +448,11 @@ export function NewSuperAdminDashboard() {
                           <TableCell>{wholesaler.email}</TableCell>
                           <TableCell>{wholesaler.phone || '-'}</TableCell>
                           <TableCell>
+                            <Badge variant={wholesaler.approved ? 'default' : 'secondary'}>
+                              {wholesaler.approved ? 'Approved' : 'Pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
                             <Badge variant={wholesaler.status === 'ACTIVE' ? 'default' : 'secondary'}>
                               {wholesaler.status}
                             </Badge>
@@ -673,17 +465,32 @@ export function NewSuperAdminDashboard() {
                           <TableCell>{wholesaler.lineWorkerCount}</TableCell>
                           <TableCell>{wholesaler.retailerCount}</TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleWholesalerStatus(wholesaler.id, wholesaler.status)}
-                            >
-                              {wholesaler.status === 'ACTIVE' ? (
-                                <ToggleRight className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <ToggleLeft className="h-4 w-4 text-gray-400" />
-                              )}
-                            </Button>
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleWholesalerApproval(wholesaler.id, wholesaler.approved)}
+                                title={wholesaler.approved ? 'Revoke Approval' : 'Approve Wholesaler'}
+                              >
+                                {wholesaler.approved ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Clock className="h-4 w-4 text-yellow-600" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleWholesalerStatus(wholesaler.id, wholesaler.status)}
+                                title={wholesaler.status === 'ACTIVE' ? 'Suspend Wholesaler' : 'Activate Wholesaler'}
+                              >
+                                {wholesaler.status === 'ACTIVE' ? (
+                                  <ToggleRight className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <ToggleLeft className="h-4 w-4 text-gray-400" />
+                                )}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

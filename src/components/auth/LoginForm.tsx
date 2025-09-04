@@ -26,9 +26,10 @@ interface LoginFormProps {
   onResetPassword: () => void;
   onShowRoleSelection?: () => void;
   selectedRole?: string | null;
+  onShowWholesalerSignup?: () => void;
 }
 
-export function LoginForm({ onToggleMode, onResetPassword, onShowRoleSelection, selectedRole }: LoginFormProps) {
+export function LoginForm({ onToggleMode, onResetPassword, onShowRoleSelection, selectedRole, onShowWholesalerSignup }: LoginFormProps) {
   const { login, loginWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +167,22 @@ export function LoginForm({ onToggleMode, onResetPassword, onShowRoleSelection, 
                   <span className="text-white">Super Admin Registration</span>
                 </div>
               </Link>
+            </div>)
+          }
+
+          {/* Wholesaler Registration */}
+          {selectedRole === 'WHOLESALER_ADMIN' && (
+            <div className="text-center pt-4">
+              <button
+                onClick={onShowWholesalerSignup}
+                className="inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 cursor-pointer bg-green-600 hover:bg-green-700"
+              >
+                <Shield className="w-4 h-4 mr-1 text-white" />
+                <span className="text-white">Register Your Wholesale Business</span>
+              </button>
+              <p className="text-xs text-gray-500 mt-2">
+                New to PharmaLync? Sign up your wholesale business
+              </p>
             </div>)
           }
         </CardContent>
